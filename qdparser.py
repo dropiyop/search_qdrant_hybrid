@@ -1,19 +1,11 @@
 import logging
 import os
 import re
-import nltk
-import nltk.corpus
 import yake
-import json
 
 
 class FileParser:
-
-
-    def __init__(self, max_length: int, directory_path: str = None, file_path: str = None):
-        if directory_path is None and file_path is None:
-            raise ValueError("Вы должны указать либо путь к файлу, либо путь к папке с файлами")
-
+    def __init__(self, max_length: int = None, directory_path: str = None, file_path: str = None):
         self.directory_path = directory_path
         self.file_path = file_path
         self.max_length = max_length
@@ -33,8 +25,6 @@ class FileParser:
         if self.directory_path:
             self.__upload_documents_from_directory()
 
-
-
     def tokenize_text(self, text: str) -> list:
         tokens = self.custom_kw_extractor.extract_keywords(text)
         return [token[0] for token in tokens]
@@ -48,54 +38,54 @@ class FileParser:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Проверяем, начинается ли файл с `[` и заканчивается `]`
-            if not (content.startswith("[") and content.endswith("]")):
-                logging.error(f"Ошибка формата JSON в файле: {filename}")
-                continue
+            blocks = []
+            if len(content) > 512:
+                header_matches = list(re.finditer(r'^h[2-3]\..*', content, flags=re.MULTILINE))
 
-            content = re.sub(r"(?<!\\)'", '"', content)
+                if header_matches:
+                    if len(header_matches) > 1:
+                        end_pos = header_matches[1].start()
+                    else:
+                        end_pos = len(content)
+                    first_block = content[0:end_pos].strip()
+                    blocks.append(first_block)
 
-            content = re.sub(r",\s*]", "]", content)  # Убираем лишнюю запятую перед закрывающей скобкой
-            content = re.sub(r"}\s*{", "}, {", content)  # Добавляем запятые между объектами
+                    for i in range(1, len(header_matches)):
+                        start = header_matches[i].start()
+                        if i + 1 < len(header_matches):
+                            end = header_matches[i + 1].start()
+                        else:
+                            end = len(content)
+                        block = content[start:end].strip()
+                        blocks.append(block)
+                else:
+                    blocks.append(content.strip())
+            else:
+                blocks.append(content.strip())
 
-            try:
-                json_data = json.loads(content)  # Парсим JSON-массив
-                if not isinstance(json_data, list):
-                    logging.error(f"Ошибка: Ожидался массив JSON в файле: {filename}")
-                    continue
-            except json.JSONDecodeError as e:
-                logging.error(f"Ошибка парсинга JSON в файле {filename}: {e}")
-                continue
+            # blocks = self.__merge_chunks(blocks)
+            for idx_block, block in enumerate(blocks):
+                raw_chunks = self.__smart_chunk_text(block.strip())
+                merged_chunks = self.__merge_chunks(raw_chunks)
 
+                for idx_chunk, chunk in enumerate(merged_chunks):
+                    if len(chunk) < 100 and 'http' not in chunk:
+                        continue
 
-            # Определяем source: если в JSON-данных есть, берем его, иначе - filename
-            source = filename
-            if json_data and "source" in json_data[0]:
-                source = json_data[0]["source"]
-
-            for idx, json_object in enumerate(json_data):
-                if not isinstance(json_object, dict):
-                    logging.warning(f"Пропущен некорректный JSON-объект в файле {filename}")
-                    continue
-
-                try:
                     project_name, wiki_name = filename[:-4].split("()")
                     wiki_name = wiki_name.rsplit('.')[0]
-                except ValueError:
-                    logging.error(f"Ошибка формата имени файла: {filename}")
-                    continue
 
-                self.points_batch.append({
-                    "source": source,
-                    "type_source": 'текстовый файл',
-                    "content": json_object.get("content", "").lower(),
-                    "title": f"{project_name} {wiki_name} - объект {idx+1}",
-                    "tokens": self.tokenize_text(json_object.get("content", "")),
-                    "project": project_name,
-                    "name": wiki_name,
-                })
+                    self.points_batch.append({
+                        "source": filename,
+                        "type_source": 'текстовый файл',
+                        "content": chunk.lower(),
+                        "title": f"{project_name} {wiki_name} - часть {idx_chunk+1}",
+                        "tokens": self.tokenize_text(chunk),
+                        "project": project_name,
+                        "name": wiki_name,
+                    })
 
-                logging.debug(f"Загружен {filename} объект {idx+1}.")
+                    logging.debug(f"Загружен {filename} часть {idx_chunk + 1}.")
 
     def __smart_chunk_text(self, text: str):
         paragraphs = text.split("\n\n")

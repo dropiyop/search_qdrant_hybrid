@@ -7,6 +7,7 @@ import init_clients
 import json
 
 
+
 async def main():
     client = qdoperator.QdClient(
         gd_host=config.QDRANT_HOST,
@@ -28,19 +29,27 @@ async def main():
                 type_of_object=qdoperator.DataObject)
             ])
 
-    # file_parser = qdparser.FileParser(max_length=2500, directory_path="data")
+    file_parser = qdparser.FileParser()
 
     with open('data/parseuc().json', 'r', encoding='utf-8') as f:
         content =  json.load(f)
 
 
+
+    for el in content:
+        el['tokens'] = file_parser.tokenize_text(el['source'])
+        el['source'] = el['source'].lower()
+        el['content'] = el['content'].lower()
+
+
     # await client.delete_collection("UC")
     # await client.create_collection("UC")
     # await client.add_points(points_batch=content, collection_name="UC")
-    res = await client.search(
-        text="Продуктовый портфель",
+    res = await client.hybrid_search(
+        text="1С Предприятие",
         collection_name="UC",
-        using="source")
+        source_field="source",
+        content_field="content")
     print(res)
 
     # res = await client.must_search(

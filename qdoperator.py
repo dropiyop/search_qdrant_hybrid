@@ -7,8 +7,7 @@ import enum
 import logging
 import typing
 import uuid
-
-
+import qdparser
 
 
 class TypeOfSource(enum.Enum):
@@ -22,13 +21,13 @@ class DataObject:
     content: str
     type_source: TypeOfSource
     source: str
-    # tokens: list
+    tokens: list
 
-    def __init__(self, content: str, type_source: TypeOfSource, source: str):
+    def __init__(self, content: str, type_source: TypeOfSource, source: str, tokens: list):
         self.content = content
         self.type_source = type_source
         self.source = source
-        # self.tokens = tokens
+        self.tokens = tokens
 
     @classmethod
     def from_dict(cls, item: dict):
@@ -37,7 +36,8 @@ class DataObject:
         return cls(
             content=str(item['content']),
             type_source=TypeOfSource(item['type_source']),
-            source=str(item['source']))
+            source=str(item['source']),
+            tokens=list(item['tokens']))
 
     @classmethod
     def get_fields(cls):
@@ -47,7 +47,7 @@ class DataObject:
         yield 'content', self.content
         yield 'type_source', self.type_source.value
         yield 'source', self.source
-        # yield 'tokens', self.tokens
+        yield 'tokens', self.tokens
 
     def __getitem__(self, key: str) -> typing.Any:
         if key == 'content':
@@ -56,8 +56,8 @@ class DataObject:
             return self.type_source.value
         elif key == 'source':
             return self.source
-        # elif key == 'tokens':
-        #     return self.tokens
+        elif key == 'tokens':
+            return self.tokens
         else:
             raise KeyError(f"Ключ '{key}' не найден в DataObject.")
 
@@ -183,10 +183,10 @@ class QdClient:
                 collection_name=collection_name,
                 vectors_config=vector_config)
 
-            # await self.qdrant.create_payload_index(
-            #     collection_name=collection_name,
-            #     field_name="tokens",
-            #     field_schema="keyword")
+            await self.qdrant.create_payload_index(
+                collection_name=collection_name,
+                field_name="tokens",
+                field_schema="keyword")
 
             logging.info(f"Коллекция '{collection_name}' успешно создана.")
 
@@ -225,22 +225,25 @@ class QdClient:
         return res.points
 
     async def hybrid_search(self, text: str, collection_name: str,
-                            content_field: str, limit: int = 3):
+                            content_field: str, source_field: str, limit: int = 3):
         content_vector = None
-
         content_vector_name = None
+
+        source_vector = None
+        source_vector_name = None
 
         for vector in self.vector_config:
             if vector.name_for_embed == content_field:
                 content_vector = await vector.get_embedding(text.lower())
                 content_vector_name = vector.name
+            if vector.name_for_embed == source_field:
+                source_vector = await vector.get_embedding(text.lower())
+                source_vector_name = vector.name
 
         if content_vector is None:
             raise ValueError(f"Некорректное название для векторизуемого поля (content): {content_field}")
 
-        stop_words = set(nltk.corpus.stopwords.words('russian'))
-        tokens = re.findall(r'\w+', text.lower())
-        query_tokens = [t for t in tokens if t not in stop_words]
+        query_tokens = qdparser.FileParser().tokenize_text(text)
         filtering_conditions = []
         for token in query_tokens:
             filtering_conditions.append(
@@ -257,15 +260,20 @@ class QdClient:
             limit=limit
         )
 
+        source_prefetch = qdrant_client.models.Prefetch(
+            query=content_vector,
+            using=content_vector_name,
+            limit=limit
+            )
+
         # Выполняем итоговый запрос, передавая prefetch и фильтр по токенам
         res = await self.qdrant.query_points(
             collection_name=collection_name,
-            prefetch=[content_prefetch],
-            query=content_vector,  # основной вектор – можно выбрать один из них
-            using=content_vector_name,  # используем для итогового сравнения один из полей
+            prefetch=[content_prefetch, source_prefetch],
+            query=source_vector,  # основной вектор – можно выбрать один из них
+            using=source_vector_name,  # используем для итогового сравнения один из полей
             limit=limit,
-            query_filter=token_filter
-        )
+            query_filter=token_filter)
 
         return res.points
 
