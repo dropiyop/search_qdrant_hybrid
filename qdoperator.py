@@ -271,7 +271,7 @@ class QdClient:
             collection_name=collection_name,
             prefetch=[content_prefetch, source_prefetch],
             query=source_vector,  # основной вектор – можно выбрать один из них
-            using=source_vector_name,  # используем для итогового сравнения один из полей
+            using=source_vector_name,  # используем для итогового сравнения один из поле
             limit=limit,
             query_filter=token_filter)
 
