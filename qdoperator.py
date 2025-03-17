@@ -352,7 +352,7 @@ class UcQuestion(DataObject):
 class AlexQuestion(DataObject):
     type_source: TypeOfSource
     source: str
-    created_at: datetime
+    created_at: int
     username: str
     tokens: list
     category_name:str
@@ -364,12 +364,12 @@ class AlexQuestion(DataObject):
             self,
             type_source: TypeOfSource,
             source: str,
-            created_at: datetime,
             question: str,
             category_name: str,
             thread_name: str,
             answer: str,
             tokens: list = None,
+            created_at: int = None,
             username: str = None):
 
         super().__init__(type_source, source, tokens)
@@ -387,12 +387,12 @@ class AlexQuestion(DataObject):
         return cls(
             type_source=TypeOfSource(item['type_source']),
             source=str(item['source']),
-            created_at = item['created_at'],
             question=item['question'],
             category_name = item['category_name'],
             thread_name = item['thread_name'],
             answer=item['answer'],
             tokens=item.get('tokens', None),
+            created_at=item['created_at', None],
             username= item.get('username', None))
 
     def __iter__(self) -> typing.Iterator[tuple[str, any]]:

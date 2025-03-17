@@ -1,13 +1,11 @@
 import json
-from datetime import datetime
+
 # Открытие и чтение JSON файла
 with open('example.json', 'r', encoding='utf-8') as file:
     data = json.load(file)
 
 # Создание нового словаря с измененной структурой
 new_data = {}
-date_str = '17.03.2025'
-date_obj = datetime.strptime(date_str, '%d.%m.%Y')
 
 # Обработка каждой записи
 for key, value in data.items():
@@ -15,7 +13,7 @@ for key, value in data.items():
         "type_source": "сайт",
         "source": value.get("url"),
         "tokens": None,
-        "created_at": date_obj.isoformat(),
+        "created_at": None,
         "username": None,
         "category_name": value.get("category_name"),
         "thread_name": value.get("thread_name"),
