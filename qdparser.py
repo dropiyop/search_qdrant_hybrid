@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import yake
+import bs4
 
 
 class FileParser:
@@ -11,16 +12,8 @@ class FileParser:
         self.max_length = max_length
         self.points_batch = []
 
-        language = "ru"
-        max_ngram_size = 3
-        deduplication_threshold = 0.5
-        deduplication_algo = 'seqm'
-        windowSize = 1
-        numOfKeywords = 20
-        self.custom_kw_extractor = yake.KeywordExtractor(lan=language, n=max_ngram_size,
-                                                         dedupLim=deduplication_threshold,
-                                                         dedupFunc=deduplication_algo, windowsSize=windowSize,
-                                                         top=numOfKeywords, features=None)
+        self.custom_kw_extractor = yake.KeywordExtractor(
+            lan="ru", n=3, dedupLim=0.5, dedupFunc='seqm', windowsSize=1, top=20, features=None)
 
         if self.directory_path:
             self.__upload_documents_from_directory()
@@ -28,6 +21,44 @@ class FileParser:
     def tokenize_text(self, text: str) -> list:
         tokens = self.custom_kw_extractor.extract_keywords(text)
         return [token[0] for token in tokens]
+
+    @classmethod
+    def clean_html(cls, html, base_url="https://www.1c-uc3.ru", url_transformer=None):
+        if html is None:
+            return None
+
+        soup = bs4.BeautifulSoup(html, 'html.parser')
+        for a_tag in soup.find_all('a'):
+            link = a_tag.get('href')
+            if link:
+                if link.startswith('/') or not (link.startswith('http://') or link.startswith('https://')):
+                    if base_url.endswith('/') and link.startswith('/'):
+                        full_link = base_url + link[1:]
+                    else:
+                        full_link = base_url + ('' if base_url.endswith('/') or link.startswith('/') else '/') + link
+
+                    if url_transformer is not None:
+                        full_link = url_transformer(full_link)
+                    a_tag.replace_with(soup.new_string(full_link))
+                else:
+                    if url_transformer is not None:
+                        link = url_transformer(link)
+                    a_tag.replace_with(soup.new_string(link))
+            else:
+                a_tag.decompose()
+
+        for tag in soup.find_all(['p', 'div', 'span', 'img', 'br']):
+            tag.unwrap()
+
+        for tag in soup.find_all(True):
+            tag.attrs = {}
+
+        result = str(soup)
+        result = result.replace('\xa0', ' ').replace('&nbsp;', ' ')
+        result = result.replace('\r\n', '\n')
+        result = result.replace(' "', " «").replace('"', "»")
+
+        return result
 
     def __upload_documents_from_directory(self):
         for filename in os.listdir(self.directory_path):
@@ -63,7 +94,6 @@ class FileParser:
             else:
                 blocks.append(content.strip())
 
-            # blocks = self.__merge_chunks(blocks)
             for idx_block, block in enumerate(blocks):
                 raw_chunks = self.__smart_chunk_text(block.strip())
                 merged_chunks = self.__merge_chunks(raw_chunks)
@@ -131,8 +161,3 @@ class FileParser:
             merged_chunks.append(current_chunk)
 
         return merged_chunks
-
-
-if __name__ == "__main__":
-    file_parser = FileParser(max_length=3000, directory_path='../data')
-    print(file_parser.points_batch)
