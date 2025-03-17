@@ -352,6 +352,7 @@ class UcQuestion(DataObject):
 class AlexQuestion(DataObject):
     type_source: TypeOfSource
     source: str
+    created_at: datetime
     username: str
     tokens: list
     category_name:str
@@ -363,6 +364,7 @@ class AlexQuestion(DataObject):
             self,
             type_source: TypeOfSource,
             source: str,
+            created_at: datetime,
             question: str,
             category_name: str,
             thread_name: str,
@@ -376,6 +378,7 @@ class AlexQuestion(DataObject):
         self.username = username
         self.category_name = category_name
         self.thread_name = thread_name
+        self.created_at = created_at
 
     @classmethod
     def from_dict(cls, item: dict):
@@ -384,6 +387,7 @@ class AlexQuestion(DataObject):
         return cls(
             type_source=TypeOfSource(item['type_source']),
             source=str(item['source']),
+            created_at = item['created_at'],
             question=item['question'],
             category_name = item['category_name'],
             thread_name = item['thread_name'],
@@ -394,6 +398,7 @@ class AlexQuestion(DataObject):
     def __iter__(self) -> typing.Iterator[tuple[str, any]]:
         yield 'type_source', self.type_source.value
         yield 'source', self.source
+        yield 'created_at', self.created_at
         yield 'tokens', self.tokens
         yield 'category_name', self.category_name
         yield 'thread_name', self.thread_name
@@ -406,6 +411,8 @@ class AlexQuestion(DataObject):
             return self.type_source.value
         elif key == 'source':
             return self.source
+        elif key == 'created_at':
+            return self.created_at
         elif key == 'username':
             return self.username
         elif key == 'tokens':

@@ -39,6 +39,8 @@ async def main():
 
     await client.add_points(points_batch=content,collection_name='Alex')
 
+
+
     # Process in batches of 100
     batch_size = 100
     total_records = len(content)
