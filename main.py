@@ -14,27 +14,27 @@ async def main():
 
     # await client.delete_collection(collection_name="Alex")
 
-    await client.create_collection(
-        collection_name="Alex",
-        type_of_object=qdoperator.AlexQuestion,
-        vector_config=[
-            qdoperator.VectorInfo(
-                name="question-openai",
-                name_for_embed='question',
-                size=1536,
-                client_embed=init_clients.client_openai,
-                type_of_object=qdoperator.AlexQuestion),
-            qdoperator.VectorInfo(
-                name="answer-openai",
-                name_for_embed='answer',
-                size=1536,
-                client_embed=init_clients.client_openai,
-                type_of_object=qdoperator.AlexQuestion)
-            ])
+    # await client.create_collection(
+    #     collection_name="Alex",
+    #     type_of_object=qdoperator.AlexQuestion,
+    #     vector_config=[
+    #         qdoperator.VectorInfo(
+    #             name="question-openai",
+    #             name_for_embed='question',
+    #             size=1536,
+    #             client_embed=init_clients.client_openai,
+    #             type_of_object=qdoperator.AlexQuestion),
+    #         qdoperator.VectorInfo(
+    #             name="answer-openai",
+    #             name_for_embed='answer',
+    #             size=1536,
+    #             client_embed=init_clients.client_openai,
+    #             type_of_object=qdoperator.AlexQuestion)
+    #         ])
 
     file_parser = qdparser.FileParser()
 
-    with open('data/transformed_data.json', 'r', encoding='utf-8') as f:
+    with open('example_data.json', 'r', encoding='utf-8') as f:
         content =  json.load(f)
 
     await client.add_points(points_batch=content,collection_name='Alex')

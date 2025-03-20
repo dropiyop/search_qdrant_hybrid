@@ -19,6 +19,7 @@ class TypeOfSource(enum.Enum):
     PDF_FILE = "pdf файл"
     EXCEL_FILE = "excel таблица"
     KASKAD = "каскад"
+    WORD_FILE = "Word файл"
 
 
 class DataObject:
@@ -348,12 +349,9 @@ class UcQuestion(DataObject):
         else:
             raise KeyError(f"Ключ '{key}' не найден в DataObject.")
 
-
 class AlexQuestion(DataObject):
     type_source: TypeOfSource
     source: str
-    created_at: int
-    username: str
     tokens: list
     category_name:str
     thread_name:str
@@ -368,17 +366,15 @@ class AlexQuestion(DataObject):
             category_name: str,
             thread_name: str,
             answer: str,
-            tokens: list = None,
-            created_at: int = None,
-            username: str = None):
+            tokens: list = None
+            ):
 
         super().__init__(type_source, source, tokens)
         self.question = question
         self.answer = answer
-        self.username = username
         self.category_name = category_name
         self.thread_name = thread_name
-        self.created_at = created_at
+
 
     @classmethod
     def from_dict(cls, item: dict):
@@ -391,30 +387,24 @@ class AlexQuestion(DataObject):
             category_name = item['category_name'],
             thread_name = item['thread_name'],
             answer=item['answer'],
-            tokens=item.get('tokens', None),
-            created_at=item['created_at', None],
-            username= item.get('username', None))
+            tokens=item.get('tokens', None)
+           )
 
     def __iter__(self) -> typing.Iterator[tuple[str, any]]:
         yield 'type_source', self.type_source.value
         yield 'source', self.source
-        yield 'created_at', self.created_at
         yield 'tokens', self.tokens
         yield 'category_name', self.category_name
         yield 'thread_name', self.thread_name
         yield 'question', self.question
         yield 'answer', self.answer
-        yield 'username', self.username
+
 
     def __getitem__(self, key: str) -> typing.Any:
         if key == 'type_source':
             return self.type_source.value
         elif key == 'source':
             return self.source
-        elif key == 'created_at':
-            return self.created_at
-        elif key == 'username':
-            return self.username
         elif key == 'tokens':
             return self.tokens
         elif key == 'category_name':
@@ -427,6 +417,86 @@ class AlexQuestion(DataObject):
             return self.answer
         else:
             raise KeyError(f"Ключ '{key}' не найден в DataObject.")
+
+
+# class AlexQuestion(DataObject):
+#     type_source: TypeOfSource
+#     source: str
+#     created_at: int
+#     username: str
+#     tokens: list
+#     category_name:str
+#     thread_name:str
+#     question: str
+#     answer: str
+#
+#     def __init__(
+#             self,
+#             type_source: TypeOfSource,
+#             source: str,
+#             question: str,
+#             category_name: str,
+#             thread_name: str,
+#             answer: str,
+#             tokens: list = None,
+#             created_at: int = None,
+#             username: str = None):
+#
+#         super().__init__(type_source, source, tokens)
+#         self.question = question
+#         self.answer = answer
+#         self.username = username
+#         self.category_name = category_name
+#         self.thread_name = thread_name
+#         self.created_at = created_at
+#
+#     @classmethod
+#     def from_dict(cls, item: dict):
+#         if not all(key in item.keys() for key in cls.get_fields()):
+#             raise ValueError(f"В объекте обязательно должны присутствовать поля {", ".join(cls.get_fields())}")
+#         return cls(
+#             type_source=TypeOfSource(item['type_source']),
+#             source=str(item['source']),
+#             question=item['question'],
+#             category_name = item['category_name'],
+#             thread_name = item['thread_name'],
+#             answer=item['answer'],
+#             tokens=item.get('tokens', None),
+#             created_at=item['created_at', None],
+#             username= item.get('username', None))
+#
+#     def __iter__(self) -> typing.Iterator[tuple[str, any]]:
+#         yield 'type_source', self.type_source.value
+#         yield 'source', self.source
+#         yield 'created_at', self.created_at
+#         yield 'tokens', self.tokens
+#         yield 'category_name', self.category_name
+#         yield 'thread_name', self.thread_name
+#         yield 'question', self.question
+#         yield 'answer', self.answer
+#         yield 'username', self.username
+#
+#     def __getitem__(self, key: str) -> typing.Any:
+#         if key == 'type_source':
+#             return self.type_source.value
+#         elif key == 'source':
+#             return self.source
+#         elif key == 'created_at':
+#             return self.created_at
+#         elif key == 'username':
+#             return self.username
+#         elif key == 'tokens':
+#             return self.tokens
+#         elif key == 'category_name':
+#             return self.category_name
+#         elif key == 'thread_name':
+#             return self.thread_name
+#         elif key == 'question':
+#             return self.question
+#         elif key == 'answer':
+#             return self.answer
+#         else:
+#             raise KeyError(f"Ключ '{key}' не найден в DataObject.")
 
 
 class UcCourseObject(DataObject):
